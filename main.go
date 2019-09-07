@@ -12,6 +12,8 @@ import (
 	"os"
 	"sync"
 	"time"
+
+	"github.com/rs/cors"
 )
 
 var (
@@ -236,6 +238,7 @@ func updateStat(ctx context.Context) {
 }
 
 func handler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
 	s := stat.at(time.Now())
 
 	data, _ := json.Marshal(s)
@@ -248,7 +251,12 @@ func main() {
 
 	go updateStat(context.Background())
 
-	http.HandleFunc("/", handler)
-	err := http.ListenAndServe(*addr, nil)
-	perr(err)
+	mux := http.NewServeMux()
+	mux.HandleFunc("/", handler)
+
+	// cors.Default() setup the middleware with default options being
+	// all origins accepted with simple methods (GET, POST). See
+	// documentation below for more options.
+	h := cors.Default().Handler(mux)
+	http.ListenAndServe(*addr, h)
 }
