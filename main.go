@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"strings"
 	"sync"
 	"time"
 
@@ -76,6 +77,18 @@ type Stat struct {
 	// ReadKeys     Hist      `json:"read_keys"`
 }
 
+// GetHist gets a Hist by tag
+func (s *Stat) GetHist(tag string) Hist {
+	switch strings.ToLower(tag) {
+	case "written_bytes":
+		return s.WrittenBytes
+	case "read_bytes":
+		return s.ReadBytes
+	}
+
+	return s.WrittenBytes
+}
+
 type ringStat struct {
 	items   []*Stat
 	head    int
@@ -127,7 +140,6 @@ func (r *ringStat) Push(item *Stat) error {
 }
 
 func (r *ringStat) Get(index int) *Stat {
-	// index must < Len
 	return r.items[(r.head+index)%r.maxSize]
 }
 
@@ -153,7 +165,7 @@ func (r *RingStat) append(regions []*regionInfo) {
 	r.Push(&s)
 }
 
-func (r *RingStat) at(t time.Time) *Stat {
+func (r *RingStat) rangeStats(startTime time.Time, endTime time.Time) []*Stat {
 	r.RLock()
 	defer r.RUnlock()
 
@@ -164,14 +176,28 @@ func (r *RingStat) at(t time.Time) *Stat {
 
 	start := r.Get(0)
 
-	n := int(t.Sub(start.Time) / *interval)
-	if n >= size {
-		n = size
-	} else if n < 0 {
-		n = 0
+	count := int(endTime.Sub(startTime) / *interval)
+
+	offset := int(startTime.Sub(start.Time) / *interval)
+	if offset >= size {
+		offset = size - 1
+	} else if offset < 0 {
+		offset = 0
 	}
 
-	return r.Get(n)
+	left := size - offset
+	if count > left {
+		count = left
+	} else if count == 0 {
+		count = 1
+	}
+
+	stats := make([]*Stat, 0, count)
+	for i := 0; i < count; i++ {
+		stats = append(stats, r.Get(offset+i))
+	}
+
+	return stats
 }
 
 type regionInfo struct {
@@ -237,11 +263,48 @@ func updateStat(ctx context.Context) {
 	}
 }
 
+type outStat struct {
+	Time    time.Time `json:"time"`
+	Buckets []Bucket  `json:"buckets"`
+}
+
 func handler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
-	s := stat.at(time.Now())
 
-	data, _ := json.Marshal(s)
+	// start=-10m&end=-1m&tag=written_bytes
+	start := r.FormValue("start")
+	end := r.FormValue("end")
+	tag := r.FormValue("tag")
+
+	endTime := time.Now()
+	startTime := endTime.Add(-*interval)
+
+	if start != "" {
+		if d, err := time.ParseDuration(start); err == nil {
+			startTime = endTime.Add(d)
+		}
+	}
+	if end != "" {
+		if d, err := time.ParseDuration(end); err == nil {
+			endTime = endTime.Add(d)
+		}
+	}
+
+	if tag == "" {
+		tag = "written_bytes"
+	}
+
+	stats := stat.rangeStats(startTime, endTime)
+
+	output := make([]outStat, len(stats))
+	for i, stat := range stats {
+		output[i] = outStat{
+			Time:    stat.Time,
+			Buckets: stat.GetHist(tag).Buckets,
+		}
+	}
+
+	data, _ := json.Marshal(output)
 	w.Write(data)
 }
 
