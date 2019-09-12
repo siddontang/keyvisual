@@ -30,8 +30,8 @@ func calValues(ranges []Range, values [][]uint64, regionsVec [][]*regionInfo, in
 		startKey := region.StartKey
 		endKey := region.EndKey
 
-		if ranges[startIndex].Start != startKey {
-			perr(fmt.Errorf("range %s, region [%s, %s)", ranges[startIndex], startKey, endKey))
+		for ranges[startIndex].Start != startKey {
+			startIndex++
 		}
 
 		nextIndex := startIndex

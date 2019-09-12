@@ -67,24 +67,30 @@ func TestCalcValues(t *testing.T) {
 			newRegionInfo("a", "c", 20),
 			newRegionInfo("c", "", 20),
 		},
+		{
+			newRegionInfo("a", "b", 10),
+			newRegionInfo("b", "c", 20),
+			newRegionInfo("c", "", 20),
+		},
 	}
 
 	values := [][]uint64{
-		{0},
-		{0},
-		{0},
-		{0},
-		{0},
+		{0, 0},
+		{0, 0},
+		{0, 0},
+		{0, 0},
+		{0, 0},
 	}
 
 	calValues(ranges, values, regions, 0, getWrittenBtes)
+	calValues(ranges, values, regions, 1, getWrittenBtes)
 
 	expected := [][]uint64{
-		{10},
-		{10},
-		{10},
-		{10},
-		{10},
+		{10, 0},
+		{10, 10},
+		{10, 20},
+		{10, 10},
+		{10, 10},
 	}
 	if !reflect.DeepEqual(values, expected) {
 		t.Fatalf("want %v, but got %v", expected, values)

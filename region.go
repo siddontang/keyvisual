@@ -17,6 +17,10 @@ type regionInfo struct {
 	ReadKeys     uint64 `json:"read_keys,omitempty"`
 }
 
+func (r *regionInfo) String() string {
+	return fmt.Sprintf("[%s, %s)", r.StartKey, r.EndKey)
+}
+
 func scanRegions() []*regionInfo {
 	const limit = 1024
 	var key []byte
