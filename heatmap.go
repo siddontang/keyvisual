@@ -66,6 +66,7 @@ func squashRanges(ranges []Range, values [][]uint64, maxBuckets int) ([]Range, [
 	for i := 0; i < n; i++ {
 		index := i * step
 		newRanges[i].Start = ranges[index].Start
+		newRanges[i].End = ranges[index].End
 		newValues[i] = values[index]
 		for j := 1; j < step && index+j < len(ranges); j++ {
 			newRanges[i].End = ranges[index+j].End

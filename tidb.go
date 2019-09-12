@@ -32,7 +32,11 @@ func (s TableSlice) Less(i, j int) bool {
 		return true
 	}
 
-	return s[i].Name < s[j].Name
+	if s[i].Name < s[j].Name {
+		return true
+	}
+
+	return s[i].ID < s[j].ID
 }
 
 // id -> map
