@@ -10,7 +10,6 @@ import (
 	"net/http"
 	"net/url"
 	"os"
-	"strings"
 	"sync"
 	"time"
 
@@ -68,25 +67,10 @@ func newHist(regions []*regionInfo, getValue func(r *regionInfo) uint64) Hist {
 	return h
 }
 
-// Stat collects the statistics for one interval
+// Stat saves all regions for one minutes
 type Stat struct {
-	Time         time.Time `json:"time"`
-	WrittenBytes Hist      `json:"written_bytes"`
-	// WrittenKeys  Hist      `json:"written_keys"`
-	ReadBytes Hist `json:"read_bytes"`
-	// ReadKeys     Hist      `json:"read_keys"`
-}
-
-// GetHist gets a Hist by tag
-func (s *Stat) GetHist(tag string) Hist {
-	switch strings.ToLower(tag) {
-	case "written_bytes":
-		return s.WrittenBytes
-	case "read_bytes":
-		return s.ReadBytes
-	}
-
-	return s.WrittenBytes
+	Time    time.Time `json:"time"`
+	Regions []*regionInfo
 }
 
 type ringStat struct {
@@ -152,11 +136,8 @@ type RingStat struct {
 
 func (r *RingStat) append(regions []*regionInfo) {
 	s := Stat{
-		Time:         time.Now(),
-		WrittenBytes: newHist(regions, func(r *regionInfo) uint64 { return r.WrittenBytes }),
-		// WrittenKeys:  newHist(regions, func(r *regionInfo) uint64 { return r.WrittenKeys }),
-		ReadBytes: newHist(regions, func(r *regionInfo) uint64 { return r.ReadBytes }),
-		// ReadKeys:     newHist(regions, func(r *regionInfo) uint64 { return r.ReadKeys }),
+		Time:    time.Now(),
+		Regions: regions,
 	}
 
 	r.Lock()
@@ -264,8 +245,11 @@ func updateStat(ctx context.Context) {
 }
 
 type outStat struct {
-	Time    time.Time `json:"time"`
-	Buckets []Bucket  `json:"buckets"`
+	StartTime time.Time `json:"start"`
+	EndTime   time.Time `json:"end"`
+	Unit      string    `json:"unit"`
+
+	Heatmaps []Heatmap `json:"heatmaps"`
 }
 
 func handler(w http.ResponseWriter, r *http.Request) {
@@ -290,18 +274,36 @@ func handler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	if tag == "" {
-		tag = "written_bytes"
+	f := func(r *regionInfo) uint64 {
+		switch tag {
+		case "read_bytes":
+			return r.ReadBytes
+		default:
+			// written_bytes
+			return r.WrittenBytes
+		}
 	}
 
 	stats := stat.rangeStats(startTime, endTime)
+	if len(stats) == 0 {
+		return
+	}
 
-	output := make([]outStat, len(stats))
-	for i, stat := range stats {
-		output[i] = outStat{
-			Time:    stat.Time,
-			Buckets: stat.GetHist(tag).Buckets,
-		}
+	regions := make([][]*regionInfo, len(stats))
+	for i := 0; i < len(regions); i++ {
+		regions[i] = stats[i].Regions
+	}
+
+	heatmap := newHeatmap(regions, *bucketNum, f)
+	heatmap.Labels = []string{""}
+
+	output := outStat{
+		StartTime: stats[0].Time,
+		EndTime:   stats[len(stats)-1].Time,
+		Unit:      interval.String(),
+		Heatmaps: []Heatmap{
+			heatmap,
+		},
 	}
 
 	data, _ := json.Marshal(output)
