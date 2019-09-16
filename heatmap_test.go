@@ -1,11 +1,16 @@
 package main
 
 import (
+	"encoding/hex"
+
+	"github.com/pingcap/tidb/tablecodec"
+	"github.com/pingcap/tidb/util/codec"
 	"reflect"
 	"testing"
 )
 
 func newRegionInfo(start string, end string, value uint64) *regionInfo {
+
 	return &regionInfo{
 		StartKey:     start,
 		EndKey:       end,
@@ -17,34 +22,49 @@ func getWrittenBtes(r *regionInfo) uint64 {
 	return r.WrittenBytes
 }
 
+func encodeTablePrefix(tableID int64) string {
+	key := tablecodec.EncodeTablePrefix(tableID)
+	raw := codec.EncodeBytes([]byte(nil), key)
+	return hex.EncodeToString(raw)
+}
+
+func encodeTableIndexPrefix(tableID int64, indexID int64) string {
+	key := tablecodec.EncodeTableIndexPrefix(tableID, indexID)
+	raw := codec.EncodeBytes([]byte(nil), key)
+	return hex.EncodeToString(raw)
+}
+
 func TestBuildRange(t *testing.T) {
 	regions := [][]*regionInfo{
 		{
-			newRegionInfo("", "a", 10),
-			newRegionInfo("a", "c", 20),
-			newRegionInfo("c", "", 20),
+			newRegionInfo(encodeTablePrefix(1), encodeTablePrefix(2), 10),
+			newRegionInfo(encodeTablePrefix(2), encodeTablePrefix(3), 20),
+			newRegionInfo(encodeTablePrefix(3), encodeTablePrefix(4), 20),
 		},
 		{
-			newRegionInfo("", "a", 10),
-			newRegionInfo("a", "b", 20),
-			newRegionInfo("b", "", 20),
+			newRegionInfo(encodeTablePrefix(1), encodeTablePrefix(2), 10),
+			newRegionInfo(encodeTablePrefix(2), encodeTablePrefix(3), 20),
+			newRegionInfo(encodeTablePrefix(3), encodeTablePrefix(4), 20),
 		},
 		{
-			newRegionInfo("", "a", 10),
-			newRegionInfo("a", "c", 20),
-			newRegionInfo("c", "d", 20),
-			newRegionInfo("d", "", 20),
+			newRegionInfo(encodeTablePrefix(1), encodeTablePrefix(2), 10),
+			newRegionInfo(encodeTablePrefix(2), encodeTablePrefix(3), 20),
+			newRegionInfo(encodeTablePrefix(3), encodeTableIndexPrefix(3, 1), 20),
+			newRegionInfo(encodeTableIndexPrefix(3, 1), encodeTablePrefix(4), 20),
 		},
 	}
 
-	ranges := buildRanges(regions)
+	builders := buildRanges(regions)
+	ranges := make([]Range, len(builders))
+	for i, b := range builders {
+		ranges[i] = b.Build()
+	}
 
 	expectd := []Range{
-		{"", "a"},
-		{"a", "b"},
-		{"b", "c"},
-		{"c", "d"},
-		{"d", ""},
+		{Key{Desc: "7480000000000000ff0100000000000000f8", TableID: 1}, Key{Desc: "7480000000000000ff0200000000000000f8", TableID: 2}},
+		{Key{Desc: "7480000000000000ff0200000000000000f8", TableID: 2}, Key{Desc: "7480000000000000ff0300000000000000f8", TableID: 3}},
+		{Key{Desc: "7480000000000000ff0300000000000000f8", TableID: 3}, Key{Desc: "7480000000000000ff035f698000000000ff0000010000000000fa", TableID: 3, IndexID: 1}},
+		{Key{Desc: "7480000000000000ff035f698000000000ff0000010000000000fa", TableID: 3, IndexID: 1}, Key{Desc: "7480000000000000ff0400000000000000f8", TableID: 4}},
 	}
 
 	if !reflect.DeepEqual(ranges, expectd) {
@@ -53,24 +73,24 @@ func TestBuildRange(t *testing.T) {
 }
 
 func TestCalcValues(t *testing.T) {
-	ranges := []Range{
-		{"", "a"},
-		{"a", "b"},
-		{"b", "c"},
-		{"c", "d"},
-		{"d", ""},
+	ranges := []RangeBuilder{
+		{"", "7480000000000000ff0100000000000000f8"},
+		{"7480000000000000ff0100000000000000f8", "7480000000000000ff0200000000000000f8"},
+		{"7480000000000000ff0200000000000000f8", "7480000000000000ff0300000000000000f8"},
+		{"7480000000000000ff0300000000000000f8", "7480000000000000ff0400000000000000f8"},
+		{"7480000000000000ff0400000000000000f8", ""},
 	}
 
 	regions := [][]*regionInfo{
 		{
-			newRegionInfo("", "a", 10),
-			newRegionInfo("a", "c", 20),
-			newRegionInfo("c", "", 20),
+			newRegionInfo("", encodeTablePrefix(1), 10),
+			newRegionInfo(encodeTablePrefix(1), encodeTablePrefix(3), 20),
+			newRegionInfo(encodeTablePrefix(3), "", 20),
 		},
 		{
-			newRegionInfo("a", "b", 10),
-			newRegionInfo("b", "c", 20),
-			newRegionInfo("c", "", 20),
+			newRegionInfo(encodeTablePrefix(1), encodeTablePrefix(2), 10),
+			newRegionInfo(encodeTablePrefix(2), encodeTablePrefix(3), 20),
+			newRegionInfo(encodeTablePrefix(3), "", 20),
 		},
 	}
 
@@ -98,7 +118,7 @@ func TestCalcValues(t *testing.T) {
 }
 
 func TestSquashRanges(t *testing.T) {
-	ranges := []Range{
+	ranges := []RangeBuilder{
 		{"", "a"},
 		{"a", "b"},
 		{"b", "c"},
@@ -116,7 +136,7 @@ func TestSquashRanges(t *testing.T) {
 
 	newRanges, newValues := squashRanges(ranges, values, 2)
 
-	expectedRanges := []Range{
+	expectedRanges := []RangeBuilder{
 		{"", "c"},
 		{"c", ""},
 	}
@@ -137,24 +157,24 @@ func TestSquashRanges(t *testing.T) {
 func TestHeatmap(t *testing.T) {
 	regions := [][]*regionInfo{
 		{
-			newRegionInfo("", "a", 10),
-			newRegionInfo("a", "c", 20),
-			newRegionInfo("c", "", 20),
+			newRegionInfo(encodeTablePrefix(1), encodeTablePrefix(2), 10),
+			newRegionInfo(encodeTablePrefix(2), encodeTablePrefix(3), 20),
+			newRegionInfo(encodeTablePrefix(3), encodeTablePrefix(4), 20),
 		},
 		{
-			newRegionInfo("", "b", 20),
-			newRegionInfo("b", "", 20),
+			newRegionInfo(encodeTablePrefix(1), encodeTablePrefix(2), 10),
+			newRegionInfo(encodeTablePrefix(2), encodeTablePrefix(4), 20),
 		},
 	}
 
 	h := newHeatmap(regions, 2, getWrittenBtes)
 
 	expectedRanges := []Range{
-		{"", "b"},
-		{"b", ""},
+		{Key{Desc: "7480000000000000ff0100000000000000f8", TableID: 1}, Key{Desc: "7480000000000000ff0300000000000000f8", TableID: 3}},
+		{Key{Desc: "7480000000000000ff0300000000000000f8", TableID: 3}, Key{Desc: "7480000000000000ff0400000000000000f8", TableID: 4}},
 	}
 
 	if !reflect.DeepEqual(expectedRanges, h.Ranges) {
-		t.Fatalf("want %v, but got %v", h.Ranges, expectedRanges)
+		t.Fatalf("want %v, but got %v", expectedRanges, h.Ranges)
 	}
 }
