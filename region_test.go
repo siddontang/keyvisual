@@ -6,9 +6,9 @@ import (
 
 func TestSearchRegion(t *testing.T) {
 	regions := []*regionInfo{
-		newRegionInfo("", "a", 10),
-		newRegionInfo("a", "c", 20),
-		newRegionInfo("c", "", 30),
+		newRegionInfo("", encodeTablePrefix(1), 10),
+		newRegionInfo(encodeTablePrefix(1), encodeTablePrefix(3), 20),
+		newRegionInfo(encodeTablePrefix(3), "", 30),
 	}
 
 	check := func(key string, expected int) {
@@ -18,18 +18,18 @@ func TestSearchRegion(t *testing.T) {
 		}
 	}
 
-	check("a", 1)
-	check("b", 1)
-	check("c", 2)
-	check("d", 2)
+	check("7480000000000000ff0100000000000000f8", 1)
+	check("7480000000000000ff0200000000000000f8", 1)
+	check("7480000000000000ff0300000000000000f8", 2)
+	check("7480000000000000ff0400000000000000f8", 2)
 }
 
 func TestRangeRegions(t *testing.T) {
 	regions := []*regionInfo{
-		newRegionInfo("", "b", 10),
-		newRegionInfo("b", "c", 20),
-		newRegionInfo("c", "e", 30),
-		newRegionInfo("e", "", 30),
+		newRegionInfo("", encodeTablePrefix(2), 10),
+		newRegionInfo(encodeTablePrefix(2), encodeTablePrefix(3), 20),
+		newRegionInfo(encodeTablePrefix(3), encodeTablePrefix(5), 20),
+		newRegionInfo(encodeTablePrefix(5), "", 30),
 	}
 
 	check := func(start string, end string, e1 int, e2 int) {
@@ -39,12 +39,12 @@ func TestRangeRegions(t *testing.T) {
 		}
 	}
 
-	check("a", "a1", 0, 1)
-	check("a1", "a2", 0, 1)
-	check("a1", "b1", 0, 2)
-	check("a", "b", 0, 1)
-	check("a", "b1", 0, 2)
-	check("d", "d1", 2, 3)
-	check("e", "f", 3, 4)
-	check("c", "f", 2, 4)
+	check(encodeTablePrefix(1), encodeTableIndexPrefix(1, 1), 0, 1)
+	check(encodeTableIndexPrefix(1, 1), encodeTableIndexPrefix(1, 2), 0, 1)
+	check(encodeTableIndexPrefix(1, 1), encodeTableIndexPrefix(2, 1), 0, 2)
+	check(encodeTablePrefix(1), encodeTablePrefix(2), 0, 1)
+	check(encodeTablePrefix(1), encodeTableIndexPrefix(2, 1), 0, 2)
+	check(encodeTablePrefix(4), encodeTableIndexPrefix(4, 1), 2, 3)
+	check(encodeTablePrefix(5), encodeTablePrefix(6), 3, 4)
+	check(encodeTablePrefix(3), encodeTablePrefix(6), 2, 4)
 }
