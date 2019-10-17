@@ -1,55 +1,80 @@
 <!DOCTYPE html>
 <html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content="" />
+    <meta name="author" content="" />
+    <title>TiDB keyvisual</title>
+    <link
+      rel="shortcut icon"
+      href="img/graham_cracker.ico"
+      type="image/x-icon"
+    />
+    <link
+      rel="stylesheet"
+      href="http://nobitagit.github.io/material-floating-button/mfb.css"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/busy-load@0.1.1/dist/app.min.css"
+    />
+    <link
+      rel="stylesheet"
+      href="http://code.ionicframework.com/ionicons/2.0.1/css/ionicons.min.css"
+    />
+    <link rel="stylesheet" href="lib/css/font-awesome.min.css" />
+    <link rel="stylesheet" href="lib/css/bootstrap.css" />
+    <link rel="stylesheet" href="css/custom.css" />
+  </head>
 
-<head>
-    <meta charset="utf-8">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="description" content="">
-    <meta name="author" content="">
-    <title>tidb key vis</title>
-    <link rel="shortcut icon" href="img/graham_cracker.ico" type="image/x-icon">
-    <link rel="stylesheet" href="http://nobitagit.github.io/material-floating-button/mfb.css">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/busy-load@0.1.1/dist/app.min.css">
-    <link rel="stylesheet" href="http://code.ionicframework.com/ionicons/2.0.1/css/ionicons.min.css">
-    <link rel="stylesheet" href="lib/css/font-awesome.min.css">
-    <link rel="stylesheet" href="lib/css/bootstrap.css">
-    <link rel="stylesheet" href="css/custom.css">
-</head>
-
-<body>
-    <div id='container-id-1'>
-        <h1 class='wait_message'>Please wait ...</h1>
+  <body>
+    <div id="container-id-1">
+      <h1 class="wait_message">Please wait ...</h1>
     </div>
-    <ul id="x-switch-menu" class="mfb-component--br mfb-zoomin" data-mfb-toggle="hover">
-        <li class="mfb-component__wrap">
-            <a href="#" class="mfb-component__button--main">
+    <ul
+      id="x-switch-menu"
+      class="mfb-component--br mfb-zoomin"
+      data-mfb-toggle="hover"
+    >
+      <li class="mfb-component__wrap">
+        <a href="#" class="mfb-component__button--main">
           <i class="mfb-component__main-icon--resting ion-plus-round"></i>
           <i class="mfb-component__main-icon--active ion-close-round"></i>
         </a>
-            <ul class="mfb-component__list">
-                <li>
-                    <a href="#" data-fetch-label="written_bytes" data-mfb-label="Write Bytes" class="mfb-component__button--child">
+        <ul class="mfb-component__list">
+          <li>
+            <a
+              href="#"
+              data-fetch-label="written_bytes"
+              data-mfb-label="Write Bytes"
+              class="mfb-component__button--child"
+            >
               <i class="mfb-component__child-icon ion-network"></i>
             </a>
-                </li>
-                <li>
-                    <a href="#" data-fetch-label="read_bytes"  data-mfb-label="Read Bytes" class="mfb-component__button--child">
-            <i class="mfb-component__child-icon ion-ios-analytics"></i>
-          </a>
-                </li>
-            </ul>
-        </li>
+          </li>
+          <li>
+            <a
+              href="#"
+              data-fetch-label="read_bytes"
+              data-mfb-label="Read Bytes"
+              class="mfb-component__button--child"
+            >
+              <i class="mfb-component__child-icon ion-ios-analytics"></i>
+            </a>
+          </li>
+        </ul>
+      </li>
     </ul>
     <!-- Required JS Libraries -->
     <script src="lib/js/d3.js"></script>
     <script src="lib/js/jquery-1.11.2.min.js"></script>
-    <script src='http://nobitagit.github.io/material-floating-button/mfb.js'></script>
-    <script src='https://cdn.jsdelivr.net/npm/busy-load@0.1.1/dist/app.min.js'></script>
+    <script src="http://nobitagit.github.io/material-floating-button/mfb.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/busy-load@0.1.1/dist/app.min.js"></script>
     <script src="lib/js/underscore-min.js"></script>
     <script src="lib/js/bootstrap.min.js"></script>
-    <script src='d3.heatmap.js'></script>
-    <script src='load_heatmap.js'></script>
-</body>
-
+    <script src="lib/js/d3.heatmap.js"></script>
+    <script src="load_heatmap.js"></script>
+  </body>
 </html>
