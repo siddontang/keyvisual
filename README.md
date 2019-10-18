@@ -28,8 +28,6 @@ arguments:
 
 ```
 ## Build frontend
-- Modify the api address(`tickDataAPIPrefix`) in front of the `frontend/load_headmap.js` file
+- Change the api address(`tickDataAPIPrefix`) in file `frontend/load_headmap.js` to the backend listening address.
 - Setup a static server for frontend
-  - `python -mSimpleHTTPServer 8000`
-  - Browse `http://localhost:8000/`
-
+  - open the `index.html` in `frontend/index.html` with Browser. (If the page does't load, please wait for a while to fetch data.)
