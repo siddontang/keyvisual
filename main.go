@@ -13,7 +13,7 @@ import (
 )
 
 var (
-	addr      = flag.String("addr", "0.0.0.0:8000", "Listening address")
+	addr      = flag.String("addr", "0.0.0.0:80", "Listening address")
 	pdAddr    = flag.String("pd", "http://127.0.0.1:2379", "PD address")
 	tidbAddr  = flag.String("tidb", "http://127.0.0.1:10080", "TiDB Address")
 	bucketNum = flag.Int("N", 256, "Max Bucket number in the histogram")
@@ -127,11 +127,14 @@ func main() {
 	go updateStat(context.Background())
 
 	mux := http.NewServeMux()
-	mux.HandleFunc("/", handler)
+	mux.HandleFunc("/heatmaps", handler)
 
 	// cors.Default() setup the middleware with default options being
 	// all origins accepted with simple methods (GET, POST). See
 	// documentation below for more options.
+	fs := http.FileServer(http.Dir("./frontend"))
+	mux.Handle("/", fs)
+
 	h := cors.Default().Handler(mux)
 	http.ListenAndServe(*addr, h)
 }

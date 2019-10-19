@@ -2,7 +2,6 @@
 Visualization of the access mode of the key in the tidb cluster.
 
 # Run keyvisual
-## Build backend 
 required: `go1.13`
 
 build:
@@ -10,7 +9,10 @@ build:
 go build . && ./keyvisual --pd=http://127.0.0.1:2379 --tidb=http://127.0.0.1:10080
 ```
 
-arguments:
+open [http://localhost](http://localhost) in Browser. (If the page does't load, please wait for a while to fetch data.)
+
+
+# arguments
 
 ```
 -I duration
@@ -27,7 +29,3 @@ arguments:
     	TiDB Address (default "http://127.0.0.1:10080")
 
 ```
-## Build frontend
-- Change the api address(`tickDataAPIPrefix`) in file `frontend/load_headmap.js` to the backend listening address.
-- Setup a static server for frontend
-  - open the `index.html` in `frontend/index.html` with Browser. (If the page does't load, please wait for a while to fetch data.)

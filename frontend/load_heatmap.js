@@ -4,7 +4,7 @@
   matrix which is needed for heatmap visualizer
 */
 
-const tickDataAPIPrefix = 'http://127.0.0.1:8000/keyvis?start=-60m&tag='
+const tickDataAPIPrefix = 'http://127.0.0.1/heatmaps?start=-60m&tag='
 var rawInfo,
   allRanges = []
 var heatmapType = 'written_bytes'
