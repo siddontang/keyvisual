@@ -12,4 +12,4 @@ go build .
 ./keyvisual --pd=http://127.0.0.1:2379 --tidb=http://127.0.0.1:10080
 ```
 
-Open [http://localhost:8000](http://localhost:8000) in Browser. (If the page does't load, please wait for a while to fetch data.)
+Open [http://localhost:8000](http://localhost:8000) in Browser.

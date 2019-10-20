@@ -38,14 +38,13 @@ func updateStat(ctx context.Context) {
 	defer ticker.Stop()
 
 	for {
+		regions := scanRegions()
+		stat.append(regions)
+		updateTables()
 		select {
+		case <-ticker.C:
 		case <-ctx.Done():
 			return
-		case <-ticker.C:
-			regions := scanRegions()
-			stat.append(regions)
-
-			updateTables()
 		}
 	}
 }
