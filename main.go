@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"flag"
+	"fmt"
 	"net/http"
 	"os"
 	"runtime/debug"
@@ -13,7 +14,7 @@ import (
 )
 
 var (
-	addr      = flag.String("addr", "0.0.0.0:80", "Listening address")
+	addr      = flag.String("addr", "0.0.0.0:8000", "Listening address")
 	pdAddr    = flag.String("pd", "http://127.0.0.1:2379", "PD address")
 	tidbAddr  = flag.String("tidb", "http://127.0.0.1:10080", "TiDB Address")
 	bucketNum = flag.Int("N", 256, "Max Bucket number in the histogram")
@@ -136,5 +137,6 @@ func main() {
 	mux.Handle("/", fs)
 
 	h := cors.Default().Handler(mux)
+	fmt.Printf("Please access http://%s to enjoy it\n", *addr)
 	http.ListenAndServe(*addr, h)
 }
