@@ -13,8 +13,9 @@ import (
 	"github.com/rs/cors"
 )
 
+const addr = "0.0.0.0:8000"
+
 var (
-	addr      = flag.String("addr", "0.0.0.0:8000", "Listening address")
 	pdAddr    = flag.String("pd", "http://127.0.0.1:2379", "PD address")
 	tidbAddr  = flag.String("tidb", "http://127.0.0.1:10080", "TiDB Address")
 	bucketNum = flag.Int("N", 256, "Max Bucket number in the histogram")
@@ -137,6 +138,6 @@ func main() {
 	mux.Handle("/", fs)
 
 	h := cors.Default().Handler(mux)
-	fmt.Printf("Please access http://%s to enjoy it\n", *addr)
-	http.ListenAndServe(*addr, h)
+	fmt.Printf("Please access http://%s to enjoy it\n", addr)
+	http.ListenAndServe(addr, h)
 }
