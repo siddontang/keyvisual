@@ -7,9 +7,10 @@ Visualization of the access mode of the key in the tidb cluster.
 Required: `go1.13`.
 
 Build and run:
+
 ```
 cd keyvisual
-go build .  
+go build .
 ./keyvisual --pd=http://127.0.0.1:2379 --tidb=http://127.0.0.1:10080
 ```
 
