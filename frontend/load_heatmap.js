@@ -16,7 +16,6 @@ let ctime = 0,
   leave it alone, or set it up by yourself
   install the requirements.txt by pip, and run `python server`
 */
-const convertAPI = 'http://106.75.91.214/convert'
 
 function getData(type) {
   return fetch(tickDataAPIPrefix + type)
@@ -25,14 +24,13 @@ function getData(type) {
       rawInfo = json
       try {
         const tl =
-          '\t' +
-          '\t\t\t' +
-          json.heatmaps[0].values[0]
-            .map((i, idx) => {
-              return idx + 'm'
-              // return 'time-' + idx
-            })
-            .join('\t')
+          // '\t' +
+          // '\t\t\t' +
+          json.heatmaps[0].values[0].map((i, idx) => {
+            return idx + 'm'
+            // return 'time-' + idx
+          })
+        // .join('\t')
 
         let dlines = [],
           b_num = 0
@@ -46,101 +44,191 @@ function getData(type) {
                 'Table: ' + h.labels[1],
                 'Data Type: ' + ds, //? h.labels[2] : 'DATA',
                 ...h.values[idx].map(i => i + 1)
-              ].join('\t')
+              ]
+              // .join('\t')
             )
             b_num += 1
           })
         })
 
-        return tl + '\n' + dlines.join('\n')
+        // return tl + '\n' + dlines.join('\n')
+        return [tl, ...dlines]
       } catch (e) {}
     })
 }
 
 var about_string = ''
 
+function getClusterColors(dlines) {
+  const all_colors = [
+    '#393b79',
+    '#aec7e8',
+    '#ff7f0e',
+    '#ffbb78',
+    '#98df8a',
+    '#bcbd22',
+    '#404040',
+    '#ff9896',
+    '#c5b0d5',
+    '#8c564b',
+    '#1f77b4',
+    '#5254a3',
+    '#FFDB58',
+    '#c49c94',
+    '#e377c2',
+    '#7f7f7f',
+    '#2ca02c',
+    '#9467bd',
+    '#dbdb8d',
+    '#17becf',
+    '#637939',
+    '#6b6ecf',
+    '#9c9ede',
+    '#d62728',
+    '#8ca252',
+    '#8c6d31',
+    '#bd9e39',
+    '#e7cb94',
+    '#843c39',
+    '#ad494a',
+    '#d6616b',
+    '#7b4173',
+    '#a55194',
+    '#ce6dbd',
+    '#de9ed6'
+  ]
+
+  return [1, 2, 3].map(i => {
+    const dict = {}
+    const s = new Set(dlines.map(l => l[i]))
+    // random way to get color, ignore this
+    Array.from(s).forEach((n, idx) => {
+      dict[n] = all_colors[(idx + 1) * i]
+      if (!dict[n]) {
+        dict[n] = all_colors[4 + idx]
+      }
+    })
+    return dict
+  })
+}
+
+function migrateCluster(data) {
+  const tl = data[0]
+  const dlines = data.slice(1)
+  // unpack the matrix
+
+  const catColors = getClusterColors(dlines)
+  const cat_colors = {
+    col: {},
+    row: {
+      ['cat-0']: catColors[0],
+      ['cat-1']: catColors[1],
+      ['cat-2']: catColors[2]
+    }
+  }
+
+  const col_nodes = tl.map((i, idx) => {
+    return {
+      clust: tl.length - idx,
+      col_index: idx,
+      ini: tl.length,
+      name: i,
+      rank: 0,
+      rankvar: 0
+    }
+  })
+
+  const mat = dlines.map(l => l.slice(4))
+
+  const row_nodes = dlines.map((l, idx) => {
+    return {
+      name: l[0],
+      ['cat-0']: l[1],
+      ['cat-1']: l[2],
+      ['cat-2']: l[3],
+      clust: dlines.length - idx,
+      ini: dlines.length - idx
+    }
+  })
+
+  return { cat_colors, col_nodes, links: [], mat, row_nodes, views: [] }
+}
+
+function buildHeatmap(json) {
+  console.log(json)
+
+  let network_data = json
+
+  var args = {
+    opacity_scale: 'log',
+    root: '#container-id-1',
+    network_data: network_data,
+    about: about_string,
+    sidebar_width: 0,
+    use_sidebar: false,
+    // 'ini_view':{'N_row_var':20}
+    ini_expand: true,
+    make_row_tooltip_handler: d => {
+      const x = rawInfo[0]['buckets'][d.rank]
+      return `from ${x['start']} to ${x['end']}`
+    },
+    make_col_tooltip_handler: d => {
+      return ''
+      return rawInfo[d.rank].time
+    },
+    matrix_tip_str_handler: (d, inst_value) => {
+      // const len = rawInfo.heatmaps[0].values.length
+      // const hidx = Math.floor(d.pos_y / len)
+      // const valIdx = d.pos_y % len
+      // const x = rawInfo.heatmaps[hidx].ranges[valIdx]
+      const x = allRanges[d.pos_y]
+
+      // const x = rawInfo[0]['buckets'][d.pos_y]
+      const row_name = `key range from ${JSON.stringify(
+        x['start']
+      )} to ${JSON.stringify(x['end'])}`
+      const col_name = '' // rawInfo[d.pos_x].time
+      tooltip_string =
+        '<p>' +
+        row_name +
+        ' and at time ' +
+        col_name +
+        '</p>' +
+        '<div> value: ' +
+        inst_value +
+        '</div>'
+      return tooltip_string
+    }
+  }
+  allRanges = []
+  rawInfo.heatmaps.forEach(h => {
+    allRanges = [...allRanges, ...h.ranges]
+  })
+
+  resize_container(args)
+
+  d3.select(window).on('resize', function() {
+    resize_container(args)
+    cgm.resize_viz()
+  })
+
+  cgm = Heatmap(args)
+
+  // check_setup_enrichr(cgm)
+
+  d3.select(cgm.params.root + ' .wait_message').remove()
+
+  $.busyLoadFull('hide')
+
+  $('.wait_message').html('Heatmap for ' + heatmapType)
+}
+
 function make_clust(type) {
   $.busyLoadFull('show')
 
   getData(type).then(data => {
-    fetch(convertAPI, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        data //: write(60, 256)
-      })
-    })
-      .then(res => res.json())
-      .then(json => {
-        console.log(json)
-
-        let network_data = json
-
-        var args = {
-          opacity_scale: 'log',
-          root: '#container-id-1',
-          network_data: network_data,
-          about: about_string,
-          sidebar_width: 0,
-          use_sidebar: false,
-          // 'ini_view':{'N_row_var':20}
-          ini_expand: true,
-          make_row_tooltip_handler: d => {
-            const x = rawInfo[0]['buckets'][d.rank]
-            return `from ${x['start']} to ${x['end']}`
-          },
-          make_col_tooltip_handler: d => {
-            return ''
-            return rawInfo[d.rank].time
-          },
-          matrix_tip_str_handler: (d, inst_value) => {
-            // const len = rawInfo.heatmaps[0].values.length
-            // const hidx = Math.floor(d.pos_y / len)
-            // const valIdx = d.pos_y % len
-            // const x = rawInfo.heatmaps[hidx].ranges[valIdx]
-            const x = allRanges[d.pos_y]
-
-            // const x = rawInfo[0]['buckets'][d.pos_y]
-            const row_name = `key range from ${JSON.stringify(
-              x['start']
-            )} to ${JSON.stringify(x['end'])}`
-            const col_name = '' // rawInfo[d.pos_x].time
-            tooltip_string =
-              '<p>' +
-              row_name +
-              ' and at time ' +
-              col_name +
-              '</p>' +
-              '<div> value: ' +
-              inst_value +
-              '</div>'
-            return tooltip_string
-          }
-        }
-        allRanges = []
-        rawInfo.heatmaps.forEach(h => {
-          allRanges = [...allRanges, ...h.ranges]
-        })
-
-        resize_container(args)
-
-        d3.select(window).on('resize', function() {
-          resize_container(args)
-          cgm.resize_viz()
-        })
-
-        cgm = Heatmap(args)
-
-        // check_setup_enrichr(cgm)
-
-        d3.select(cgm.params.root + ' .wait_message').remove()
-
-        $.busyLoadFull('hide')
-
-        $('.wait_message').html('Heatmap for ' + heatmapType)
-      })
+    const json = migrateCluster(data)
+    return buildHeatmap(json)
   })
 
   // d3.json('json/' + inst_network, function(network_data) {
@@ -171,76 +259,3 @@ $('#x-switch-menu').click(e => {
   heatmapType = t
   make_clust(t)
 })
-
-// write func to generate three types data matrixs for visualization
-function write(times, col) {
-  const timesArr = Array(times)
-    .fill(1)
-    .map((i, u) => 'time' + u)
-  const colArr = Array(col) // Math.pow(10, col)
-    .fill(1)
-    .map((i, u) => 'col-' + u)
-
-  switches[0] = (key, kidx) => {
-    return (
-      key +
-      '\t' +
-      timesArr
-        .map(i => {
-          // 1. const num = Math.ceil(Math.random() * 100000)
-          const num =
-            (+i.replace('time', '') % 6 === 0 ? 1 : 0) * 100000 +
-            Math.ceil(Math.random() * 100000)
-          return num
-        })
-        .join('\t')
-    )
-  }
-
-  switches[1] = (key, kidx) => {
-    return (
-      key +
-      '\t' +
-      timesArr
-        .map(i => {
-          const timenum = +i.replace('time', '')
-          const num =
-            (((timenum > 10 && timenum < 45 && kidx < 100 && kidx > 60
-              ? 1
-              : 0) *
-              100000 *
-              (timenum - 10)) /
-              45) *
-              0.9 +
-            Math.ceil(Math.random() * 100000) / 2
-          return num
-        })
-        .join('\t')
-    )
-  }
-
-  switches[2] = (key, kidx) => {
-    return (
-      key +
-      '\t' +
-      timesArr
-        .map(i => {
-          const timenum = +i.replace('time', '')
-          const num =
-            (timenum > 10 && timenum < 45 && kidx < 240 && kidx > 30 ? 1 : 0) *
-              200000 *
-              ((kidx - 30) / 180) *
-              ((timenum - 3) / 45) *
-              0.9 +
-            Math.ceil(Math.random() * 100000) / 2
-          return num
-        })
-        .join('\t')
-    )
-  }
-
-  const ret = '\t' + timesArr.join('\t') + '\n'
-  const valRet = colArr.map(switches[ctime % 3]).join('\n')
-  ctime += 1
-  return ret + valRet
-}

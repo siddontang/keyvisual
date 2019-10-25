@@ -25,6 +25,8 @@ arguments:
 
 ```
 ## Build frontend
-- Modify the api address in line 96 of the `frontend/load_headmap.js` file
-- Open the `index.html` in chrome
+- Modify the api address(`tickDataAPIPrefix`) in front of the `frontend/load_headmap.js` file
+- Setup a static server for frontend, and then open the `index.html` in chrome
+  - `cd frontend;python2 -mSimpleHTTPServer 8000`
+  - Browse `http://localhost:8000/`
 
