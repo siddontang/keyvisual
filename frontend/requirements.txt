@@ -27,7 +27,7 @@ python-linux-procfs==0.4.9
 pytz==2019.2
 pyudev==0.15
 pyxattr==0.5.1
-PyYAML==3.10
+PyYAML==5.4
 schedutils==0.4
 scikit-learn==0.20.4
 scipy==1.2.2
