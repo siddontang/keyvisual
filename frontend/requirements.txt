@@ -14,7 +14,7 @@ Jinja2==2.10.1
 kitchen==1.1.1
 langtable==0.0.31
 MarkupSafe==1.1.1
-numpy==1.16.5
+numpy==1.22.0
 pandas==0.24.2
 perf==0.1
 pycurl==7.19.0
